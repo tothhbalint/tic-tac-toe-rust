@@ -54,22 +54,15 @@ struct Board {
     magic_square: Vec<u32>,
 }
 
-//function to generate the numbers for the magic square
-// a vector represents the square, it should be interpreted as a 2d array
-fn create_magic_square(dimensions: u32, magic_square: &mut Vec<u32>) {
-    magic_square.resize((dimensions * dimensions) as usize, 0);
-    //case for a odd magic squares
-    if dimensions % 2 != 0 {
-        let magic_number = dimensions * (dimensions * dimensions + 1) / 2;
-        //the number to place
-        let mut x: u32 = 1;
+fn calc_odd_magic_square(start_num : u32,dimensions : u32, square : &mut Vec<u32>){
+        let mut x: u32 = start_num + 1;
         //the position to place the number
         let mut y: u32 = (dimensions + 1) / 2;
         //offset in the matrix in x direction
         let mut i: u32 = y % dimensions;
 
-        while x <= dimensions * dimensions {
-            magic_square[(y - 1) as usize] = x;
+        while x <= dimensions * dimensions + start_num {
+            square[(y - 1) as usize] = x;
             x = x + 1;
             let prev_y = y;
             if y <= dimensions {
@@ -83,10 +76,19 @@ fn create_magic_square(dimensions: u32, magic_square: &mut Vec<u32>) {
             } else {
                 y = y + 1;
             }
-            if magic_square[(y - 1) as usize] != 0 {
+            if square[(y - 1) as usize] != 0 {
                 y = prev_y + dimensions;
             }
         }
+}
+
+//function to generate the numbers for the magic square
+// a vector represents the square, it should be interpreted as a 2d array
+fn create_magic_square(dimensions: u32, magic_square: &mut Vec<u32>) {
+    magic_square.resize((dimensions * dimensions) as usize, 0);
+    //case for a odd magic squares
+    if dimensions % 2 != 0 {
+        calc_odd_magic_square(0,dimensions, magic_square);
     }
     //case for a doubly even magic square
     else if dimensions % 4 == 0 {
@@ -94,7 +96,61 @@ fn create_magic_square(dimensions: u32, magic_square: &mut Vec<u32>) {
     }
     //case for a singly even magic square
     else if dimensions % 3 == 0 {
-        // TODO implement
+        // first we divide into 4 quadrants then call calc_odd_magic_square on each quadrant
+        let mut squares : Vec<Vec<u32>> = vec![vec![]; 4];
+        let dim = dimensions / 2;
+        // resize the squares inner vectors to the correct length
+        for i in 0..4 {
+            squares[i].resize((dim * dim) as usize, 0);
+        }
+        // fill the squares
+        for x in 0..dimensions{
+            for y in 0..dimensions{
+                //top left
+                if x < dim && y < dim{
+                    squares[0][(x * dim + y) as usize] = magic_square[(x * dimensions + y) as usize];
+                }
+                //bottom left
+                else if x < dim && y >= dim{
+                    squares[3][(x * dim + (y - dim)) as usize] = magic_square[(x * dimensions + y) as usize];
+                }
+                //top right
+                else if x >= dim && y < dim{
+                    squares[2][((x - dim) * dim + y) as usize] = magic_square[(x * dimensions + y) as usize];
+                }
+                //bottom right
+                else if x >= dim && y >= dim{
+                    squares[1][((x - dim) * dim + (y - dim)) as usize] = magic_square[(x * dimensions + y) as usize];
+                }
+            }
+        }
+
+        // calculate the magic squares for each quadrant
+        for i in 0..4{
+            calc_odd_magic_square(i as u32 * (dim * dim), dim, &mut squares[i]);
+        }
+
+        // fill the magic square
+        for x in 0..dimensions{
+            for y in 0..dimensions{
+                //top left
+                if x < dim && y < dim{
+                    magic_square[(x * dimensions + y) as usize] = squares[0][(x * dim + y) as usize];
+                }
+                //bottom left
+                else if x < dim && y >= dim{
+                    magic_square[(x * dimensions + y) as usize] = squares[2][(x * dim + (y - dim)) as usize];
+                }
+                //top right
+                else if x >= dim && y < dim{
+                    magic_square[(x * dimensions + y) as usize] = squares[3][((x - dim) * dim + y) as usize];
+                }
+                //bottom right
+                else if x >= dim && y >= dim{
+                    magic_square[(x * dimensions + y) as usize] = squares[1][((x - dim) * dim + (y - dim)) as usize];
+                }
+            }
+        }
     }
 }
 
@@ -292,6 +348,6 @@ impl Game {
 // TODO: Add a menu to choose the dimensions of the board
 
 fn main() {
-    let game = Game::new(5);
+    let game = Game::new(6);
     game.run_game();
 }
